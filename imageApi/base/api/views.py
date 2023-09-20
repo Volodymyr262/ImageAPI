@@ -1,8 +1,15 @@
 from rest_framework.decorators import api_view
 from rest_framework.response import Response
 from .serializers import ImageSerializer
-from base.models import Image
+from base.models import ImageModel
 from rest_framework import generics
+from PIL import Image
+
+
+def thumb200(file, size):
+    img = Image.open(str(file))
+    img.thumbnail(size)
+    img.save('images/thumbnail.jpg')
 
 
 @api_view(['GET'])
@@ -17,16 +24,20 @@ def getRoutes(request):
 
 @api_view(['GET'])
 def getImage(request, pk):
-    image = Image.objects.get(id=pk)
+    image = ImageModel.objects.get(id=pk)
     serializer = ImageSerializer(image, many=False)
+    size = (400, 400)
+    thumb200(image.file.name, size=size)
     return Response(serializer.data)
 
 
 @api_view(['GET'])
 def getImages(request):
-    image = Image.objects.all()
-    serializer = ImageSerializer(image, many=True)
+    images = ImageModel.objects.filter(user=request.user)
+    serializer = ImageSerializer(images, many=True)
     return Response(serializer.data)
 
 
+class ImageUploadView(generics.CreateAPIView):
+    serializer_class = ImageSerializer
 

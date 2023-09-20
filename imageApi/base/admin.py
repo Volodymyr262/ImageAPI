@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import Image, accountTier
+from .models import ImageModel, accountTier
 
-admin.site.register(Image)
+admin.site.register(ImageModel)
 admin.site.register(accountTier)
