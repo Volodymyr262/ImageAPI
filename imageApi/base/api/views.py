@@ -2,22 +2,17 @@ from rest_framework.decorators import api_view
 from rest_framework.response import Response
 from .serializers import ImageSerializer
 from base.models import ImageModel
+from rest_framework import status
 from rest_framework import generics
-from PIL import Image
-
-
-def thumb200(file, size):
-    img = Image.open(str(file))
-    img.thumbnail(size)
-    img.save('images/thumbnail.jpg')
 
 
 @api_view(['GET'])
 def getRoutes(request):
     routes = [
         'GET /api',
-        'POST /api/image/:id',
+        'GET /api/image/:id',
         'GET /api/images',
+        'POST /api/upload'
     ]
     return Response(routes)
 

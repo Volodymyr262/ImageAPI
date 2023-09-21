@@ -10,6 +10,8 @@ class accountTier(models.Model):
 class ImageModel(models.Model):
     title = models.CharField(null=True, max_length=100)
     file = models.ImageField(upload_to='images/')
+    file200px = models.ImageField(null=True, upload_to='images/')
+    file400px = models.ImageField(null=True, upload_to='images/')
     user = models.ForeignKey(User, on_delete=models.CASCADE, null=True)
 
     def image_url(self):

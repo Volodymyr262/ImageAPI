@@ -70,7 +70,7 @@ DATABASES = {
     }
 }
 
-MEDIA_URL = 'images/'
+MEDIA_URL = '/images/'
 # Password validation
 # https://docs.djangoproject.com/en/3.2/ref/settings/#auth-password-validators
 
