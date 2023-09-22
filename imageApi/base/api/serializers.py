@@ -1,15 +1,16 @@
-from rest_framework.serializers import ModelSerializer
+from rest_framework.serializers import ModelSerializer, ValidationError
 from base.models import ImageModel
 from django.core.files.uploadedfile import SimpleUploadedFile
 from PIL import Image
 import os
 import uuid
+from django.conf import settings
 
 
 class ImageSerializer(ModelSerializer):
     class Meta:
         model = ImageModel
-        fields = ['file', 'title']
+        fields = ['file']
 
     def create(self, validated_data):
         # Set the 'user' field to the current user (request.user)
@@ -29,11 +30,59 @@ class ImageSerializer(ModelSerializer):
         image = ImageModel.objects.create(**validated_data)
         return image
 
-    def create_thumbnail(self, image, size):
-        # Open the uploaded image
-        img = Image.open(image)
+    def validate_file(self, value):
+        """
+        Validate that the uploaded file is in PNG or JPG format.
+        """
+        allowed_formats = ['image/jpeg', 'image/png']
 
-        # Create a thumbnail
+        # Check if the uploaded file's content type is allowed
+        if value.content_type not in allowed_formats:
+            raise ValidationError("Only PNG or JPG images are allowed.")
+
+        return value
+
+    def to_representation(self, instance):
+        # Get the default serialized data
+        data = super().to_representation(instance)
+
+        # Get the request object from the context
+        request = self.context.get('request')
+
+        # Check the user's account tier and include links accordingly
+        user_account_tier = instance.user.account_tier.name if instance.user.account_tier else None
+
+        if user_account_tier == 'Basic':
+            data.pop('file', None)
+            if instance.file200px:
+                data['thumbnail200px'] = request.build_absolute_uri(instance.file200px.url)
+            else:
+                data['thumbnail200px'] = None
+
+        elif user_account_tier == 'Premium' or user_account_tier == 'Enterprise':
+            if instance.file200px:
+                data['thumbnail200px'] = request.build_absolute_uri(instance.file200px.url)
+            else:
+                data['thumbnail200px'] = None
+
+            if instance.file400px:
+                data['thumbnail400px'] = request.build_absolute_uri(instance.file400px.url)
+            else:
+                data['thumbnail400px'] = None
+
+            if instance.file:
+                data['original_image'] = request.build_absolute_uri(instance.file.url)
+            else:
+                data['original_image'] = None
+
+            # expiring_link_seconds = instance.user.expiring_link_seconds if instance.user.expiring_link_seconds else None
+            # if expiring_link_seconds and 300 <= expiring_link_seconds <= 30000:
+            #     pass
+
+        return data
+
+    def create_thumbnail(self, image, size):
+        img = Image.open(image)
         img.thumbnail(size)
 
         # Generate a unique filename for the thumbnail
@@ -42,7 +91,6 @@ class ImageSerializer(ModelSerializer):
         # Define the full path for the thumbnail
         thumbnail_path = os.path.join('images', thumbnail_filename)
 
-        # Save the thumbnail
         img.save(thumbnail_path, format='JPEG')
 
         # Create a SimpleUploadedFile from the saved thumbnail
