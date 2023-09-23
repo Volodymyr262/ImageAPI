@@ -1,16 +1,30 @@
 from rest_framework.serializers import ModelSerializer, ValidationError
-from base.models import ImageModel
+from django.core.signing import TimestampSigner
+from django.utils import timezone
 from django.core.files.uploadedfile import SimpleUploadedFile
+from base.models import ImageModel
 from PIL import Image
 import os
 import uuid
-from django.conf import settings
+import base64
 
 
 class ImageSerializer(ModelSerializer):
     class Meta:
         model = ImageModel
         fields = ['file']
+
+    def __init__(self, *args, **kwargs):
+        # Get the user's account tier from the context
+        user_account_tier = kwargs['context']['request'].user.account_tier.name
+
+        # Define serializer fields based on the user's account tier
+        if user_account_tier == 'Basic' or user_account_tier=='Premium':
+            self.Meta.fields = ['file']
+        elif user_account_tier == 'Enterprise':
+            self.Meta.fields = ['file', 'expiring_link_seconds']
+
+        super().__init__(*args, **kwargs)
 
     def create(self, validated_data):
         # Set the 'user' field to the current user (request.user)
@@ -59,7 +73,7 @@ class ImageSerializer(ModelSerializer):
             else:
                 data['thumbnail200px'] = None
 
-        elif user_account_tier == 'Premium' or user_account_tier == 'Enterprise':
+        elif user_account_tier == 'Premium':
             if instance.file200px:
                 data['thumbnail200px'] = request.build_absolute_uri(instance.file200px.url)
             else:
@@ -75,11 +89,44 @@ class ImageSerializer(ModelSerializer):
             else:
                 data['original_image'] = None
 
-            # expiring_link_seconds = instance.user.expiring_link_seconds if instance.user.expiring_link_seconds else None
-            # if expiring_link_seconds and 300 <= expiring_link_seconds <= 30000:
-            #     pass
+        elif user_account_tier == 'Enterprise':
+            if instance.file200px:
+                data['thumbnail200px'] = request.build_absolute_uri(instance.file200px.url)
+            else:
+                data['thumbnail200px'] = None
+
+            if instance.file400px:
+                data['thumbnail400px'] = request.build_absolute_uri(instance.file400px.url)
+            else:
+                data['thumbnail400px'] = None
+
+            if instance.file:
+                data['original_image'] = request.build_absolute_uri(instance.file.url)
+            else:
+                data['original_image'] = None
+
+            expiration_time_seconds = instance.expiring_link_seconds
+
+            # Calculate the expiration time as a timestamp (adding seconds to the current time)
+            expiration_time = timezone.now() + timezone.timedelta(seconds=expiration_time_seconds)
+
+            # Create a signer and sign the URL with the expiration time as a string
+            signer = TimestampSigner()
+            signed_url = signer.sign(instance.file.url + str(int(expiration_time.timestamp())))
+
+            # Encode the signed URL using base64
+            encoded_signed_url = base64.urlsafe_b64encode(signed_url.encode()).decode()
+
+            # Include the encoded signed URL in the response data
+            data['expiring_image_link'] = request.build_absolute_uri(encoded_signed_url)
 
         return data
+
+    def validate_expiring_link_seconds(self, value):
+        if value:
+            if not (300 <= value <= 3000):
+                raise ValidationError("Expiration seconds must be between 300 and 3000.")
+            return value
 
     def create_thumbnail(self, image, size):
         img = Image.open(image)

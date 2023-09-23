@@ -10,7 +10,6 @@ from rest_framework import generics
 def getRoutes(request):
     routes = [
         'GET /api',
-        'GET /api/image/:id',
         'GET /api/images',
         'POST /api/upload'
     ]

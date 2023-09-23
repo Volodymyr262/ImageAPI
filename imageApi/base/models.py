@@ -21,7 +21,10 @@ class ImageModel(models.Model):
     file200px = models.ImageField(null=True, upload_to='images/')
     file400px = models.ImageField(null=True, upload_to='images/')
     user = models.ForeignKey(User, on_delete=models.CASCADE, null=True)
-
+    expiring_link_seconds = models.IntegerField(
+        null=True,
+        help_text="Number of seconds the link should expire in (between 300 and 30000).",
+    )
     def image_url(self):
         return self.file.url
 
