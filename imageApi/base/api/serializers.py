@@ -33,6 +33,8 @@ class TemporaryLinkSerializer(ModelSerializer):
         request = self.context.get('request')
         data['temporary_link'] = 'http://127.0.0.1:8000/api/link/' + str(instance.id)
         return data
+
+
 class ImageSerializer(ModelSerializer):
     class Meta:
         model = ImageModel
@@ -150,3 +152,9 @@ class ImageSerializer(ModelSerializer):
         os.remove(thumbnail_path)
 
         return thumbnail
+
+
+class ImagesSerializer(ModelSerializer):
+    class Meta:
+        model = ImageModel
+        fields = '__all__'

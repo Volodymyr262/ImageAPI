@@ -1,6 +1,6 @@
 from rest_framework.decorators import api_view
 from rest_framework.response import Response
-from .serializers import ImageSerializer, TemporaryLinkSerializer
+from .serializers import ImageSerializer, TemporaryLinkSerializer, ImagesSerializer
 from base.models import ImageModel, TemporaryLink
 from rest_framework import status
 from rest_framework import generics
@@ -22,7 +22,7 @@ def getRoutes(request):
 @api_view(['GET'])
 def getImages(request):
     images = ImageModel.objects.filter(user=request.user)
-    serializer = ImageSerializer(images, many=True)
+    serializer = ImagesSerializer(images, many=True)
     return Response(serializer.data)
 
 
