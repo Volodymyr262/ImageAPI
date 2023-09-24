@@ -1,6 +1,6 @@
 from django.db import models
 from django.contrib.auth.models import AbstractUser
-
+from django.utils import timezone
 
 class accountTier(models.Model):
     name = models.CharField(max_length=50)
@@ -29,7 +29,18 @@ class ImageModel(models.Model):
         return self.file.url
 
 
+class TemporaryLink(models.Model):
+    file = models.ImageField(upload_to='images/', null=True)
+    expiration_time = models.DateTimeField(null=True)
+    user = models.ForeignKey(User, on_delete=models.CASCADE, null=True)
+    time = models.IntegerField(
+        null=True,
+        help_text="Number of seconds the link should expire in (between 300 and 30000).",
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
 
+    def is_expired(self):
+        return timezone.now() >= self.expiration_time
 
-
-
+    def image_url(self):
+        return str(self.file)
