@@ -2,9 +2,13 @@ from django.db import models
 from django.contrib.auth.models import AbstractUser
 from django.utils import timezone
 
+
 class accountTier(models.Model):
     name = models.CharField(max_length=50)
-
+    width = models.IntegerField(null=True)
+    height = models.IntegerField(null=True)
+    original_image = models.BooleanField(null=True)
+    exp_link = models.BooleanField(null=True)
     def __str__(self):
         return self.name
 
@@ -12,7 +16,7 @@ class accountTier(models.Model):
 class User(AbstractUser):
     name = models.CharField(max_length=200, null=True)
     email = models.EmailField(unique=True, null=True)
-    account_tier = models.ForeignKey(accountTier, on_delete=models.CASCADE, null=True)
+    account_tier = models.ForeignKey(accountTier, on_delete=models.SET_NULL, null=True)
     REQUIRED_FIELDS = ['email']
 
 
@@ -21,10 +25,7 @@ class ImageModel(models.Model):
     file200px = models.ImageField(null=True, upload_to='images/')
     file400px = models.ImageField(null=True, upload_to='images/')
     user = models.ForeignKey(User, on_delete=models.CASCADE, null=True)
-    expiring_link_seconds = models.IntegerField(
-        null=True,
-        help_text="Number of seconds the link should expire in (between 300 and 30000).",
-    )
+    thumbnail = models.ImageField(null=True, upload_to='images/')
     def image_url(self):
         return self.file.url
 

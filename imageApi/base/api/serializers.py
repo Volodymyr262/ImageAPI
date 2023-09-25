@@ -28,10 +28,17 @@ class TemporaryLinkSerializer(ModelSerializer):
     def to_representation(self, instance):
         # Get the default serialized data
         data = super().to_representation(instance)
-
+        data.pop('file', None)
+        data.pop('time', None)
         # Get the request object from the context
         request = self.context.get('request')
-        data['temporary_link'] = 'http://127.0.0.1:8000/api/link/' + str(instance.id)
+        if request.user.account_tier.name == 'Enterprise':
+            data['temporary_link'] = 'http://127.0.0.1:8000/api/link/' + str(instance.id)
+        elif request.user.account_tier.exp_link:
+            data['temporary_link'] = 'http://127.0.0.1:8000/api/link/' + str(instance.id)
+        else:
+            data['temporary_link'] = 'Access denied'
+
         return data
 
 
@@ -58,15 +65,21 @@ class ImageSerializer(ModelSerializer):
 
         # Get the uploaded image file
         uploaded_image = validated_data['file']
+        if self.context['request'].user.account_tier.name == 'Basic':
+            # Create a 200px thumbnail
+            thumbnail_200px = self.create_thumbnail(uploaded_image, (200, 200))
+            validated_data['file200px'] = thumbnail_200px
 
-        # Create a 200px thumbnail
-        thumbnail_200px = self.create_thumbnail(uploaded_image, (200, 200))
-        validated_data['file200px'] = thumbnail_200px
+        if self.context['request'].user.account_tier.name == 'Premium' or self.context['request'].user.account_tier.name == 'Enterprise':
+            thumbnail_200px = self.create_thumbnail(uploaded_image, (200, 200))
+            validated_data['file200px'] = thumbnail_200px
+            thumbnail_400px = self.create_thumbnail(uploaded_image, (400, 400))
+            validated_data['file400px'] = thumbnail_400px
 
-        # Create a 400px thumbnail
-        thumbnail_400px = self.create_thumbnail(uploaded_image, (400, 400))
-        validated_data['file400px'] = thumbnail_400px
-
+        else:
+            if self.context['request'].user.account_tier.width and self.context['request'].user.account_tier.height:
+                thumbnail = self.create_thumbnail(uploaded_image, (self.context['request'].user.account_tier.width, self.context['request'].user.account_tier.height))
+                validated_data['thumbnail'] = thumbnail
         image = ImageModel.objects.create(**validated_data)
         return image
 
@@ -91,31 +104,14 @@ class ImageSerializer(ModelSerializer):
 
         # Check the user's account tier and include links accordingly
         user_account_tier = instance.user.account_tier.name if instance.user.account_tier else None
-
+        data.pop('file', None)
         if user_account_tier == 'Basic':
-            data.pop('file', None)
             if instance.file200px:
                 data['thumbnail200px'] = request.build_absolute_uri(instance.file200px.url)
             else:
                 data['thumbnail200px'] = None
 
-        elif user_account_tier == 'Premium':
-            if instance.file200px:
-                data['thumbnail200px'] = request.build_absolute_uri(instance.file200px.url)
-            else:
-                data['thumbnail200px'] = None
-
-            if instance.file400px:
-                data['thumbnail400px'] = request.build_absolute_uri(instance.file400px.url)
-            else:
-                data['thumbnail400px'] = None
-
-            if instance.file:
-                data['original_image'] = request.build_absolute_uri(instance.file.url)
-            else:
-                data['original_image'] = None
-
-        elif user_account_tier == 'Enterprise':
+        elif user_account_tier == 'Premium' or user_account_tier == 'Enterprise':
             if instance.file200px:
                 data['thumbnail200px'] = request.build_absolute_uri(instance.file200px.url)
             else:
@@ -130,6 +126,10 @@ class ImageSerializer(ModelSerializer):
                 data['original_image'] = request.build_absolute_uri(instance.file.url)
             else:
                 data['original_image'] = None
+        else:
+            if instance.user.account_tier.original_image:
+                data['thumbnail'] = request.build_absolute_uri(instance.thumbnail.url)
+                data['original_image'] = request.build_absolute_uri(instance.file.url)
 
         return data
 

@@ -35,7 +35,7 @@ class create_temporary_link_view(generics.CreateAPIView):
 
 
 @api_view(['GET'])
-def check_temporary_link(request, pk):
+def get_temporary_link(request, pk):
     try:
         link = TemporaryLink.objects.get(pk=pk)
     except TemporaryLink.DoesNotExist:
