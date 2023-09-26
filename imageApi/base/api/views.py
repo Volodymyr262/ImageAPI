@@ -56,10 +56,8 @@ def get_temporary_link(request, pk):
     elif file_extension == 'png':
         content_type = 'image/png'
     else:
-        # Если тип неизвестен, можно установить общий тип контента
         content_type = 'application/octet-stream'
 
-    # Открываем и отправляем изображение как HTTP-ответ
     with open(image_path, 'rb') as image_file:
         image_data = image_file.read()
 
