@@ -5,8 +5,7 @@ from base.models import ImageModel, TemporaryLink
 from rest_framework import status
 from rest_framework import generics
 from django.http import HttpResponse
-import os
-from django.conf import settings
+from rest_framework.permissions import IsAuthenticated
 
 
 @api_view(['GET'])
@@ -21,17 +20,22 @@ def getRoutes(request):
 
 @api_view(['GET'])
 def getImages(request):
-    images = ImageModel.objects.filter(user=request.user)
-    serializer = ImagesSerializer(images, many=True)
-    return Response(serializer.data)
+    if request.user.is_authenticated:
+        images = ImageModel.objects.filter(user=request.user)
+        serializer = ImagesSerializer(images, many=True)
+        return Response(serializer.data)
+    else:
+        return Response("Access denied, you have to be logged in")
 
 
 class ImageUploadView(generics.CreateAPIView):
     serializer_class = ImageSerializer
+    permission_classes = [IsAuthenticated]
 
 
 class create_temporary_link_view(generics.CreateAPIView):
     serializer_class = TemporaryLinkSerializer
+    permission_classes = [IsAuthenticated]
 
 
 @api_view(['GET'])
@@ -44,14 +48,8 @@ def get_temporary_link(request, pk):
     if link.is_expired():
         return Response({'message': 'link expired'}, status=status.HTTP_400_BAD_REQUEST)
 
-    # Формируем правильный путь к изображению относительно MEDIA_ROOT
     image_path = link.image_url()
 
-    # Проверяем, существует ли файл
-    # if not os.path.exists(os.path.join(settings.BASE_DIR, image_path)):
-    #     return Response({'message': 'image not found'}, status=status.HTTP_404_NOT_FOUND)
-
-    # Определяем тип контента на основе расширения файла
     file_extension = image_path.split('.')[-1].lower()
     if file_extension in ('jpg', 'jpeg'):
         content_type = 'image/jpeg'
