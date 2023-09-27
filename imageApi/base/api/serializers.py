@@ -4,6 +4,7 @@ from django.utils import timezone
 from django.core.files.uploadedfile import SimpleUploadedFile
 from base.models import ImageModel, TemporaryLink
 from PIL import Image
+from rest_framework.response import Response
 import os
 import uuid
 
@@ -80,6 +81,8 @@ class ImageSerializer(ModelSerializer):
             if self.context['request'].user.account_tier.width and self.context['request'].user.account_tier.height:
                 thumbnail = self.create_thumbnail(uploaded_image, (self.context['request'].user.account_tier.width, self.context['request'].user.account_tier.height))
                 validated_data['thumbnail'] = thumbnail
+            else:
+                return Response("invalid Image model")
         image = ImageModel.objects.create(**validated_data)
         return image
 
