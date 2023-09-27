@@ -3,12 +3,14 @@ from django.contrib.auth.models import AbstractUser
 from django.utils import timezone
 
 
+# User's account tier
 class accountTier(models.Model):
     name = models.CharField(max_length=50)
     width = models.IntegerField(null=True)
     height = models.IntegerField(null=True)
     original_image = models.BooleanField(null=True)
     exp_link = models.BooleanField(null=True)
+
     def __str__(self):
         return self.name
 
@@ -20,6 +22,8 @@ class User(AbstractUser):
     REQUIRED_FIELDS = ['email']
 
 
+# image model that contains 2 thumbnails for standard account tiers and thumbnail field that contains
+# custom thumbnail for custom account tiers
 class ImageModel(models.Model):
     file = models.ImageField(upload_to='images/')
     file200px = models.ImageField(null=True, upload_to='images/')
@@ -30,6 +34,7 @@ class ImageModel(models.Model):
         return self.file.url
 
 
+# temporary link model for expiring links to the images
 class TemporaryLink(models.Model):
     file = models.ImageField(upload_to='images/', null=True)
     expiration_time = models.DateTimeField(null=True)

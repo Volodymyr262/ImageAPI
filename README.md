@@ -1,2 +1,0 @@
-# ImageAPI
-recruitment task

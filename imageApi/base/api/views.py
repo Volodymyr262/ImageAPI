@@ -18,12 +18,35 @@ def getRoutes(request):
     return Response(routes)
 
 
+# view for user to see all user's images
 @api_view(['GET'])
 def getImages(request):
     if request.user.is_authenticated:
         images = ImageModel.objects.filter(user=request.user)
         serializer = ImagesSerializer(images, many=True)
-        return Response(serializer.data)
+        formatted_data = []
+
+        for item in serializer.data:
+            if item['file200px']:
+                item['file200px'] = request.build_absolute_uri(item['file200px'])
+            if item['file400px']:
+                item['file400px'] = request.build_absolute_uri(item['file400px'])
+            if item['file']:
+                item['file'] = request.build_absolute_uri(item['file'])
+            if item['thumbnail']:
+                item['thumbnail'] = request.build_absolute_uri(item['thumbnail'])
+            formatted_item = {
+                'id': item['id'],
+                'files': [
+                    {'size': 'original', 'url': item['file']},
+                    {'size': '200px', 'url': item['file200px']},
+                    {'size': '400px', 'url': item['file400px']},
+                    {'custom thumbnail': item['thumbnail']},
+                ]
+            }
+            formatted_data.append(formatted_item)
+
+        return Response(formatted_data)
     else:
         return Response("Access denied, you have to be logged in")
 
@@ -38,6 +61,7 @@ class create_temporary_link_view(generics.CreateAPIView):
     permission_classes = [IsAuthenticated]
 
 
+# view for expiring link
 @api_view(['GET'])
 def get_temporary_link(request, pk):
     try:
